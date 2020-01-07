@@ -576,6 +576,15 @@ void AfterStat(uv_fs_t* req) {
   }
 }
 
+void AfterStatfs(uv_fs_t* req) {
+  FSReqBase* req_wrap = FSReqBase::from_req(req);
+  FSReqAfterScope after(req_wrap, req);
+
+  if (after.Proceed()) {
+    req_wrap->Resolve(Integer::New(req_wrap->env()->isolate(), req->result));
+  }
+}
+
 void AfterInteger(uv_fs_t* req) {
   FSReqBase* req_wrap = FSReqBase::from_req(req);
   FSReqAfterScope after(req_wrap, req);
@@ -952,6 +961,23 @@ static void FStat(const FunctionCallbackInfo<Value>& args) {
     Local<Value> arr = FillGlobalStatsArray(env, use_bigint,
         static_cast<const uv_stat_t*>(req_wrap_sync.req.ptr));
     args.GetReturnValue().Set(arr);
+  }
+}
+
+static void Statfs(const FunctionCallbackInfo<Value>& args) {
+  Environment* env = Environment::GetCurrent(args);
+
+  const int argc = args.Length();
+  CHECK_GE(argc, 2);
+
+  BufferValue path(env->isolate(), args[0]);
+  CHECK_NOT_NULL(*path);
+
+  bool use_bigint = args[1]->IsTrue();
+  FSReqBase* req_wrap_async = GetReqWrap(env, args[2], use_bigint);
+  if (req_wrap_async != nullptr) {  // statfs(path, use_bigint, req)
+    AsyncCall(env, req_wrap_async, args, "statfs", UTF8, AfterStatfs,
+              uv_fs_statfs, *path);
   }
 }
 
@@ -2138,6 +2164,7 @@ void Initialize(Local<Object> target,
   env->SetMethod(target, "stat", Stat);
   env->SetMethod(target, "lstat", LStat);
   env->SetMethod(target, "fstat", FStat);
+  env->SetMethod(target, "statfs", Statfs);
   env->SetMethod(target, "link", Link);
   env->SetMethod(target, "symlink", Symlink);
   env->SetMethod(target, "readlink", ReadLink);
