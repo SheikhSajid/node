@@ -309,6 +309,8 @@ Environment::Environment(IsolateData* isolate_data,
       thread_id_(thread_id == kNoThreadId ? AllocateThreadId() : thread_id),
       fs_stats_field_array_(isolate_, kFsStatsBufferLength),
       fs_stats_field_bigint_array_(isolate_, kFsStatsBufferLength),
+      fs_statfs_field_array_(isolate_, kFsStatfsBufferLength),
+      fs_statfs_field_bigint_array_(isolate_, kFsStatfsBufferLength),
       context_(context->GetIsolate(), context) {
   // We'll be creating new objects so make sure we've entered the context.
   HandleScope handle_scope(isolate());
@@ -1033,6 +1035,9 @@ void Environment::MemoryInfo(MemoryTracker* tracker) const {
   tracker->TrackField("fs_stats_field_array", fs_stats_field_array_);
   tracker->TrackField("fs_stats_field_bigint_array",
                       fs_stats_field_bigint_array_);
+  tracker->TrackField("fs_statfs_field_array", fs_statfs_field_array_);
+  tracker->TrackField("fs_statfs_field_bigint_array",
+                      fs_statfs_field_bigint_array_);
   tracker->TrackField("thread_stopper", thread_stopper_);
   tracker->TrackField("cleanup_hooks", cleanup_hooks_);
   tracker->TrackField("async_hooks", async_hooks_);
