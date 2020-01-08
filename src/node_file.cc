@@ -500,6 +500,10 @@ void FSReqCallback::ResolveStat(const uv_stat_t* stat) {
   Resolve(FillGlobalStatsArray(env(), use_bigint(), stat));
 }
 
+void FSReqCallback::ResolveStatfs(const uv_statfs_t* stat) {
+  Resolve(FillGlobalStatfsArray(env(), use_bigint(), stat));
+}
+
 void FSReqCallback::Resolve(Local<Value> value) {
   Local<Value> argv[2] {
     Null(env()->isolate()),
@@ -581,7 +585,7 @@ void AfterStatfs(uv_fs_t* req) {
   FSReqAfterScope after(req_wrap, req);
 
   if (after.Proceed()) {
-    req_wrap->Resolve(Integer::New(req_wrap->env()->isolate(), req->result));
+    req_wrap->ResolveStatfs((uv_statfs_t*)(req->ptr));
   }
 }
 

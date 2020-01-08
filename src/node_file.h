@@ -55,6 +55,7 @@ class FSReqBase : public ReqWrap<uv_fs_t> {
   virtual void Reject(v8::Local<v8::Value> reject) = 0;
   virtual void Resolve(v8::Local<v8::Value> value) = 0;
   virtual void ResolveStat(const uv_stat_t* stat) = 0;
+  virtual void ResolveStatfs(const uv_statfs_t* stat) = 0;
   virtual void SetReturnValue(
       const v8::FunctionCallbackInfo<v8::Value>& args) = 0;
 
@@ -100,6 +101,7 @@ class FSReqCallback final : public FSReqBase {
   void Reject(v8::Local<v8::Value> reject) override;
   void Resolve(v8::Local<v8::Value> value) override;
   void ResolveStat(const uv_stat_t* stat) override;
+  void ResolveStatfs(const uv_statfs_t* stat) override;
   void SetReturnValue(const v8::FunctionCallbackInfo<v8::Value>& args) override;
 
   SET_MEMORY_INFO_NAME(FSReqCallback)
@@ -119,6 +121,14 @@ inline v8::Local<v8::Value> FillGlobalStatsArray(Environment* env,
                                                  const uv_stat_t* s,
                                                  const bool second = false);
 
+template <typename NativeT, typename V8T>
+void FillStatfsArray(AliasedBufferBase<NativeT, V8T>* fields,
+                     const uv_statfs_t* s);
+
+inline v8::Local<v8::Value> FillGlobalStatfsArray(Environment* env,
+                                                  const bool use_bigint,
+                                                  const uv_statfs_t* s);
+
 template <typename AliasedBufferT>
 class FSReqPromise final : public FSReqBase {
  public:
@@ -128,6 +138,7 @@ class FSReqPromise final : public FSReqBase {
   inline void Reject(v8::Local<v8::Value> reject) override;
   inline void Resolve(v8::Local<v8::Value> value) override;
   inline void ResolveStat(const uv_stat_t* stat) override;
+  inline void ResolveStatfs(const uv_statfs_t* stat) override;
   inline void SetReturnValue(
       const v8::FunctionCallbackInfo<v8::Value>& args) override;
   inline void MemoryInfo(MemoryTracker* tracker) const override;
@@ -147,6 +158,7 @@ class FSReqPromise final : public FSReqBase {
 
   bool finished_ = false;
   AliasedBufferT stats_field_array_;
+  AliasedBufferT statfs_field_array_;
 };
 
 class FSReqAfterScope final {
