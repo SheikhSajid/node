@@ -982,6 +982,20 @@ static void Statfs(const FunctionCallbackInfo<Value>& args) {
   if (req_wrap_async != nullptr) {  // statfs(path, use_bigint, req)
     AsyncCall(env, req_wrap_async, args, "statfs", UTF8, AfterStatfs,
               uv_fs_statfs, *path);
+  } else {
+    CHECK_EQ(argc, 4);
+    FSReqWrapSync req_wrap_sync;
+    FS_SYNC_TRACE_BEGIN(statfs);
+    int err = SyncCall(env, args[3], &req_wrap_sync, "statfs", uv_fs_statfs, *path);
+    FS_SYNC_TRACE_END(statfs);
+
+    if (err != 0) {
+      return;  // error info is in ctx
+    }
+
+    Local<Value> arr = FillGlobalStatfsArray(env, use_bigint,
+        static_cast<const uv_statfs_t*>(req_wrap_sync.req.ptr));
+    args.GetReturnValue().Set(arr);
   }
 }
 
