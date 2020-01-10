@@ -110,6 +110,22 @@ fs.stat(__filename, common.mustCall(function(err, s) {
   });
 }));
 
+fs.statfs(__filename, common.mustCall(function(err, stats) {
+  assert.ifError(err);
+  [
+    'type', 'bsize', 'blocks', 'bfree', 'bavail', 'files', 'ffree'
+  ].forEach((k) => {
+    assert.ok(stats.hasOwnProperty(k));
+    assert.strictEqual(typeof stats[k], 'number', `${k} should be a number`);
+  });
+  assert.ok(stats.hasOwnProperty('spare'));
+  assert.ok(stats.spare instanceof Array);
+  // Confirm that we are not running in the context of the internal binding
+  // layer.
+  // Ref: https://github.com/nodejs/node/commit/463d6bac8b349acc462d345a6e298a76f7d06fb1
+  assert.strictEqual(this, undefined);
+}));
+
 ['', false, null, undefined, {}, []].forEach((input) => {
   ['fstat', 'fstatSync'].forEach((fnName) => {
     assert.throws(
@@ -151,6 +167,20 @@ fs.stat(__filename, common.mustCall(function(err, s) {
       name: 'TypeError'
     }
   );
+  assert.throws(
+    () => fs.statfs(input, common.mustNotCall()),
+    {
+      code: 'ERR_INVALID_ARG_TYPE',
+      name: 'TypeError'
+    }
+  );
+  assert.throws(
+    () => fs.statfsSync(input),
+    {
+      code: 'ERR_INVALID_ARG_TYPE',
+      name: 'TypeError'
+    }
+  );
 });
 
 // Should not throw an error
@@ -163,3 +193,6 @@ fs.open(__filename, 'r', undefined, common.mustCall((err, fd) => {
 
 // Should not throw an error
 fs.lstat(__filename, undefined, common.mustCall(() => {}));
+
+// Should not throw an error
+fs.statfs(__filename, undefined, common.mustCall(() => {}));
