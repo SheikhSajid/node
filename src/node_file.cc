@@ -585,7 +585,7 @@ void AfterStatfs(uv_fs_t* req) {
   FSReqAfterScope after(req_wrap, req);
 
   if (after.Proceed()) {
-    req_wrap->ResolveStatfs((uv_statfs_t*)(req->ptr));
+    req_wrap->ResolveStatfs(reinterpret_cast<uv_statfs_t*>(req->ptr));
   }
 }
 
@@ -986,7 +986,8 @@ static void Statfs(const FunctionCallbackInfo<Value>& args) {
     CHECK_EQ(argc, 4);
     FSReqWrapSync req_wrap_sync;
     FS_SYNC_TRACE_BEGIN(statfs);
-    int err = SyncCall(env, args[3], &req_wrap_sync, "statfs", uv_fs_statfs, *path);
+    int err = SyncCall(env, args[3], &req_wrap_sync, "statfs", uv_fs_statfs,
+                       *path);
     FS_SYNC_TRACE_END(statfs);
 
     if (err != 0) {

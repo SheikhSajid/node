@@ -1406,7 +1406,7 @@ class Environment : public MemoryRetainer {
 
   AliasedFloat64Array fs_stats_field_array_;
   AliasedBigUint64Array fs_stats_field_bigint_array_;
-  
+
   AliasedFloat64Array fs_statfs_field_array_;
   AliasedBigUint64Array fs_statfs_field_bigint_array_;
 
