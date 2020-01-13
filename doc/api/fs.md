@@ -1001,6 +1001,88 @@ The times in the stat object have the following semantics:
 Prior to Node.js 0.12, the `ctime` held the `birthtime` on Windows systems. As
 of 0.12, `ctime` is not "creation time", and on Unix systems, it never was.
 
+## Class: `fs.Statfs`
+
+Provides information about a mounted filesystem.
+
+Objects returned from [`fs.statfs()`][] and [`fs.statfsSync()`][] are of this type. If `bigint` in the `options` passed to those methods is true, the numeric values will be `bigint` instead of `number`.
+
+```console
+Statfs {
+  type: 1397114950,
+  bsize: 4096,
+  blocks: 121938943,
+  bfree: 61058895,
+  bavail: 61058895,
+  files: 999,
+  ffree: 1000000,
+  spare: [ 0, 0, 0, 0 ]
+}
+```
+
+`bigint` version:
+
+```console
+Statfs {
+  type: 1397114950n,
+  bsize: 4096n,
+  blocks: 121938943n,
+  bfree: 61058895n,
+  bavail: 61058895n,
+  files: 999n,
+  ffree: 1000000n,
+  spare: [ 0n, 0n, 0n, 0n ]
+}
+```
+
+### `statfs.type`
+
+* {number|bigint}
+
+Type of filesystem.
+
+### `statfs.bsize`
+
+* {number|bigint}
+
+Optimal transfer block size.
+
+### `statfs.blocks`
+
+* {number|bigint}
+
+Total data blocks in filesystem.
+
+### `statfs.bfree`
+
+* {number|bigint}
+
+Free blocks in filesystem.
+
+### `statfs.bavail`
+
+* {number|bigint}
+
+Free blocks available to unprivileged user.
+
+### `statfs.files`
+
+* {number|bigint}
+
+Total file nodes in filesystem.
+
+### `statfs.ffree`
+
+* {number|bigint}
+
+Free file nodes in filesystem.
+
+### `statfs.spare`
+
+* {Array}
+
+Padding bytes reserved for future use.
+
 ## Class: `fs.WriteStream`
 <!-- YAML
 added: v0.1.93
@@ -3472,6 +3554,31 @@ changes:
 
 Synchronous stat(2).
 
+## `fs.statfs(path[, options], callback)`
+* `path` {string|Buffer|URL}
+* `options` {Object}
+  * `bigint` {boolean} Whether the numeric values in the returned
+    [`fs.Statfs`][] object should be `bigint`. **Default:** `false`.
+* `callback` {Function}
+  * `err` {Error}
+  * `stats` {fs.Statfs}
+
+Asynchronous statfs(2). The callback gets two arguments `(err, stats)` where
+`stats` is an [`fs.Statfs`][] object.
+
+Returns information about the mounted filesystem which contains `path`.
+
+In case of an error, the `err.code` will be one of [Common System Errors][].
+
+## `fs.statfsSync(path[, options])`
+* `path` {string|Buffer|URL}
+* `options` {Object}
+  * `bigint` {boolean} Whether the numeric values in the returned
+    [`fs.Statfs`][] object should be `bigint`. **Default:** `false`.
+* Returns: {fs.Statfs}
+
+Synchronous statfs(2).
+
 ## `fs.symlink(target, path[, type], callback)`
 <!-- YAML
 added: v0.1.31
@@ -5092,6 +5199,16 @@ changes:
 * Returns: {Promise}
 
 The `Promise` is resolved with the [`fs.Stats`][] object for the given `path`.
+
+### `fsPromises.statfs(path[, options])`
+
+* `path` {string|Buffer|URL}
+* `options` {Object}
+  * `bigint` {boolean} Whether the numeric values in the returned
+    [`fs.Stats`][] object should be `bigint`. **Default:** `false`.
+* Returns: {Promise}
+
+The `Promise` is resolved with the [`fs.Statfs`][] object for the given `path`.
 
 ### `fsPromises.symlink(target, path\[, type\])`
 <!-- YAML
