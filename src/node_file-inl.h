@@ -39,11 +39,20 @@ void FSContinuationData::Done(int result) {
   done_cb_(req_);
 }
 
-FSReqBase::FSReqBase(Environment* env,
-          v8::Local<v8::Object> req,
-          AsyncWrap::ProviderType type,
-          bool use_bigint)
-  : ReqWrap(env, req, type), use_bigint_(use_bigint) {
+FSReqBase::FSReqBase(Environment* env,             // set by NewFSReqCallback 1
+                     v8::Local<v8::Object> req,    // set by NewFSReqCallback 1
+                     AsyncWrap::ProviderType type, // set by FSReqCallback constructor 2
+                     bool use_bigint               // set by NewFSReqCallback 1)
+  : ReqWrap(env, req, type /* (provider) type is set by FSReqCallback::FSReqCallback */), 
+    use_bigint_(use_bigint /* field in FSReqBase */) {
+  /*
+   * Stage 3
+   * Calls ReqWrap constrictor and sets the `use_bigint_` field.
+   * Just uses the given params to set stuff up
+   * 
+   * So far, the FSReqBase class is only required for storing the BigInt flag,
+   * I do not see any other use.
+   */
 }
 
 void FSReqBase::Init(const char* syscall,
@@ -73,8 +82,18 @@ FSReqBase::Init(const char* syscall, size_t len, enum encoding encoding) {
 }
 
 FSReqCallback::FSReqCallback(Environment* env,
-                             v8::Local<v8::Object> req, bool use_bigint)
-  : FSReqBase(env, req, AsyncWrap::PROVIDER_FSREQCALLBACK, use_bigint) {}
+                             v8::Local<v8::Object> req, 
+                             bool use_bigint)
+  : FSReqBase(env,
+              req, 
+              AsyncWrap::PROVIDER_FSREQCALLBACK, // set AsyncWrap::ProviderType 
+              use_bigint) { 
+  /* 
+   * Stage 2
+   * This constructor's only job is to call the FSReqBase constructor with 
+   * the provider type set as `AsyncWrap::PROVIDER_FSREQCALLBACK` :p 
+   */ 
+}
 
 template <typename NativeT, typename V8T>
 void FillStatsArray(AliasedBufferBase<NativeT, V8T>* fields,
@@ -224,11 +243,16 @@ FSReqBase* GetReqWrap(Environment* env, v8::Local<v8::Value> value,
 
 // Returns nullptr if the operation fails from the start.
 template <typename Func, typename... Args>
-FSReqBase* AsyncDestCall(Environment* env, FSReqBase* req_wrap,
+FSReqBase* AsyncDestCall(Environment* env,
+                         FSReqBase* req_wrap,
                          const v8::FunctionCallbackInfo<v8::Value>& args,
-                         const char* syscall, const char* dest,
-                         size_t len, enum encoding enc, uv_fs_cb after,
-                         Func fn, Args... fn_args) {
+                         const char* syscall,
+                         const char* dest,
+                         size_t len,
+                         enum encoding enc,
+                         uv_fs_cb after,
+                         Func fn,
+                         Args... fn_args) {
   CHECK_NOT_NULL(req_wrap);
   req_wrap->Init(syscall, dest, len, enc);
   int err = req_wrap->Dispatch(fn, fn_args..., after);
@@ -250,11 +274,21 @@ template <typename Func, typename... Args>
 FSReqBase* AsyncCall(Environment* env,
                      FSReqBase* req_wrap,
                      const v8::FunctionCallbackInfo<v8::Value>& args,
-                     const char* syscall, enum encoding enc,
-                     uv_fs_cb after, Func fn, Args... fn_args) {
-  return AsyncDestCall(env, req_wrap, args,
-                       syscall, nullptr, 0, enc,
-                       after, fn, fn_args...);
+                     const char* syscall, 
+                     enum encoding enc,
+                     uv_fs_cb after, 
+                     Func fn, // uv function e.g. uv_fs_write()
+                     Args... fn_args /* args passed to fn */) {
+  return AsyncDestCall(env,
+                       req_wrap,
+                       args,    // JS args
+                       syscall, 
+                       nullptr, // dest
+                       0,       // len
+                       enc,
+                       after,
+                       fn,
+                       fn_args...);
 }
 
 // Template counterpart of SYNC_CALL, except that it only puts

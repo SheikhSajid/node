@@ -519,6 +519,10 @@ void FSReqCallback::SetReturnValue(const FunctionCallbackInfo<Value>& args) {
 void NewFSReqCallback(const FunctionCallbackInfo<Value>& args) {
   CHECK(args.IsConstructCall());
   Environment* env = Environment::GetCurrent(args);
+
+  // Stage 1
+  // Calls FSReqCallback::FSReqCallback in `node_file-inl.h`
+  // Which calls FSReqBase
   new FSReqCallback(env, args.This(), args[0]->IsTrue());
 }
 
@@ -1731,31 +1735,31 @@ static void WriteBuffer(const FunctionCallbackInfo<Value>& args) {
   CHECK_GE(argc, 4);
 
   CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  const int fd = args[0].As<Int32>()->Value(); // fd
 
   CHECK(Buffer::HasInstance(args[1]));
-  Local<Object> buffer_obj = args[1].As<Object>();
-  char* buffer_data = Buffer::Data(buffer_obj);
+  Local<Object> buffer_obj = args[1].As<Object>(); // buffer
+  char* buffer_data = Buffer::Data(buffer_obj); // buffer to char
   size_t buffer_length = Buffer::Length(buffer_obj);
 
   CHECK(IsSafeJsInt(args[2]));
-  const int64_t off_64 = args[2].As<Integer>()->Value();
+  const int64_t off_64 = args[2].As<Integer>()->Value(); // offset
   CHECK_GE(off_64, 0);
   CHECK_LE(static_cast<uint64_t>(off_64), buffer_length);
   const size_t off = static_cast<size_t>(off_64);
 
   CHECK(args[3]->IsInt32());
-  const size_t len = static_cast<size_t>(args[3].As<Int32>()->Value());
+  const size_t len = static_cast<size_t>(args[3].As<Int32>()->Value()); // len
   CHECK(Buffer::IsWithinBounds(off, len, buffer_length));
   CHECK_LE(len, buffer_length);
   CHECK_GE(off + len, off);
 
-  const int64_t pos = GetOffset(args[4]);
+  const int64_t pos = GetOffset(args[4]); // position
 
   char* buf = buffer_data + off;
   uv_buf_t uvbuf = uv_buf_init(buf, len);
 
-  FSReqBase* req_wrap_async = GetReqWrap(env, args[5]);
+  FSReqBase* req_wrap_async = GetReqWrap(env, args[5]); // uv request
   if (req_wrap_async != nullptr) {  // write(fd, buffer, off, len, pos, req)
     AsyncCall(env, req_wrap_async, args, "write", UTF8, AfterInteger,
               uv_fs_write, fd, &uvbuf, 1, pos);
@@ -1785,13 +1789,15 @@ static void WriteBuffers(const FunctionCallbackInfo<Value>& args) {
   CHECK_GE(argc, 3);
 
   CHECK(args[0]->IsInt32());
-  const int fd = args[0].As<Int32>()->Value();
+  const int fd = args[0].As<Int32>()->Value(); // fd
 
   CHECK(args[1]->IsArray());
-  Local<Array> chunks = args[1].As<Array>();
+  Local<Array> chunks = args[1].As<Array>(); // buffers array
 
-  int64_t pos = GetOffset(args[2]);
+  int64_t pos = GetOffset(args[2]); // position
 
+  // Allocate an uv_buf_t array of lenth `chunks->Length()`
+  // Stack is used for up to 1024 items, malloc otherwise
   MaybeStackBuffer<uv_buf_t> iovs(chunks->Length());
 
   for (uint32_t i = 0; i < iovs.length(); i++) {
@@ -1800,10 +1806,18 @@ static void WriteBuffers(const FunctionCallbackInfo<Value>& args) {
     iovs[i] = uv_buf_init(Buffer::Data(chunk), Buffer::Length(chunk));
   }
 
-  FSReqBase* req_wrap_async = GetReqWrap(env, args[3]);
+  FSReqBase* req_wrap_async = GetReqWrap(env, args[3]); // uv request wrap
   if (req_wrap_async != nullptr) {  // writeBuffers(fd, chunks, pos, req)
-    AsyncCall(env, req_wrap_async, args, "write", UTF8, AfterInteger,
-              uv_fs_write, fd, *iovs, iovs.length(), pos);
+    AsyncCall(
+      env,
+      req_wrap_async,                 // req
+      args,                           // js args
+      "write",                        // syscall name (where is this used?)
+      UTF8,                           // enum encoding enc 
+      AfterInteger,                   // after: uv_fs_cb(req)
+      uv_fs_write,                    // Func fn: libuv API function to call
+      fd, *iovs, iovs.length(), pos   // Args... fn_args: args passed to fn
+    );
   } else {  // writeBuffers(fd, chunks, pos, undefined, ctx)
     CHECK_EQ(argc, 5);
     FSReqWrapSync req_wrap_sync;
